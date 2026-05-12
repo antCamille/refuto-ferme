@@ -867,6 +867,10 @@ const EmailCenter = ({ user }) => {
   const [sending, setSending] = useState(false)
   const [toast, setToast] = useState('')
 
+  // Cache les logs uniquement dans l'interface admin actuelle.
+  // Rien n'est supprimé dans Supabase.
+  const [hiddenEmailLogIds, setHiddenEmailLogIds] = useState([])
+
   const showToast = msg => {
     setToast(msg)
     setTimeout(() => setToast(''), 4000)
@@ -1076,6 +1080,24 @@ const EmailCenter = ({ user }) => {
     setSending(false)
   }
 
+  const visibleEmails = emails.filter(e => !hiddenEmailLogIds.includes(e.id))
+  const hiddenCount = emails.length - visibleEmails.length
+
+  const clearEmailLogUI = () => {
+    if (emails.length === 0) {
+      showToast('Aucun log à masquer.')
+      return
+    }
+
+    setHiddenEmailLogIds(emails.map(e => e.id))
+    showToast('Historique masqué dans l’interface seulement ✓')
+  }
+
+  const restoreEmailLogUI = () => {
+    setHiddenEmailLogIds([])
+    showToast('Historique réaffiché ✓')
+  }
+
   if (loading) return <Spinner />
 
   return (
@@ -1096,16 +1118,29 @@ const EmailCenter = ({ user }) => {
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         <Btn onClick={autoGen}>📰 Générer newsletter semaine</Btn>
+
         <Btn
           onClick={() => resetCompose({ nextMode: 'annonce', nextSubject: '', nextBody: '', nextRecipientMode: 'manual' })}
           v="a"
         >
           ✉️ Nouveau courriel
         </Btn>
+
+        {emails.length > 0 && visibleEmails.length > 0 && (
+          <Btn onClick={clearEmailLogUI} v="gh">
+            🧹 Clear log UI
+          </Btn>
+        )}
+
+        {hiddenEmailLogIds.length > 0 && (
+          <Btn onClick={restoreEmailLogUI} v="gh">
+            ↩️ Réafficher logs{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
+          </Btn>
+        )}
       </div>
 
       <div style={{ display: 'grid', gap: 10 }}>
-        {emails.map(e => (
+        {visibleEmails.map(e => (
           <div key={e.id} style={{ background: T.card2, border: `1px solid ${T.border}`, borderRadius: 11, padding: '13px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div>
@@ -1125,6 +1160,12 @@ const EmailCenter = ({ user }) => {
         {emails.length === 0 && (
           <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>
             Aucun courriel envoyé.
+          </div>
+        )}
+
+        {emails.length > 0 && visibleEmails.length === 0 && (
+          <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13, background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '13px 16px' }}>
+            Historique masqué dans cette session. Les logs existent toujours dans Supabase.
           </div>
         )}
       </div>
@@ -1274,6 +1315,7 @@ const EmailCenter = ({ user }) => {
     </div>
   )
 }
+
 
 // ══════════════════════════════════════════════════════════════
 // CLIENTS ADMIN
