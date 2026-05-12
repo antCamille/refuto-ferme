@@ -847,7 +847,6 @@ const SubsView = ({ user }) => {
 // ══════════════════════════════════════════════════════════════
 // EMAIL CENTER
 // ══════════════════════════════════════════════════════════════
-
 const EmailCenter = ({ user }) => {
   const { rows: emails, loading, insert } = useTable('emails_log')
   const { rows: inventory } = useTable('inventory')
@@ -860,8 +859,10 @@ const EmailCenter = ({ user }) => {
   const [body, setBody] = useState('')
   const [mode, setMode] = useState('newsletter')
 
-  const [recipientMode, setRecipientMode] = useState('all')
+  const [recipientMode, setRecipientMode] = useState('manual')
   const [selectedClientIds, setSelectedClientIds] = useState([])
+  const [manualEmail, setManualEmail] = useState('')
+  const [manualName, setManualName] = useState('Test')
 
   const [sending, setSending] = useState(false)
   const [toast, setToast] = useState('')
@@ -882,8 +883,7 @@ const EmailCenter = ({ user }) => {
       .replaceAll("'", '&#039;')
 
   const textToHtml = text =>
-    htmlEscape(text)
-      .replaceAll('\n', '<br />')
+    htmlEscape(text).replaceAll('\n', '<br />')
 
   const personalize = (template, client) => {
     const firstName = (client.name || '').split(' ')[0] || client.name || ''
@@ -894,10 +894,31 @@ const EmailCenter = ({ user }) => {
       .replaceAll('{email}', client.email || '')
   }
 
+  const isValidEmail = email => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim())
+  }
+
   const getTargetClients = () => {
     if (recipientMode === 'all') return clients
 
-    return clients.filter(c => selectedClientIds.includes(c.id))
+    if (recipientMode === 'selected') {
+      return clients.filter(c => selectedClientIds.includes(c.id))
+    }
+
+    if (recipientMode === 'manual') {
+      const cleanEmail = manualEmail.trim()
+
+      if (!cleanEmail) return []
+
+      return [{
+        id: 'manual-test-recipient',
+        name: manualName.trim() || 'Test',
+        email: cleanEmail,
+        role: 'manual',
+      }]
+    }
+
+    return []
   }
 
   const toggleClient = id => {
@@ -908,12 +929,19 @@ const EmailCenter = ({ user }) => {
     )
   }
 
-  const resetCompose = ({ nextMode = 'annonce', nextSubject = '', nextBody = '', nextRecipientMode = 'selected' } = {}) => {
+  const resetCompose = ({
+    nextMode = 'annonce',
+    nextSubject = '',
+    nextBody = '',
+    nextRecipientMode = 'manual',
+  } = {}) => {
     setMode(nextMode)
     setSubj(nextSubject)
     setBody(nextBody)
     setRecipientMode(nextRecipientMode)
     setSelectedClientIds([])
+    setManualEmail('')
+    setManualName('Test')
     setCompose(true)
   }
 
@@ -930,8 +958,10 @@ const EmailCenter = ({ user }) => {
     )
 
     setMode('newsletter')
-    setRecipientMode('all')
+    setRecipientMode(clients.length > 0 ? 'all' : 'manual')
     setSelectedClientIds([])
+    setManualEmail('')
+    setManualName('Test')
     setCompose(true)
   }
 
@@ -980,9 +1010,9 @@ const EmailCenter = ({ user }) => {
       return
     }
 
-    const invalidClients = targetClients.filter(c => !c.email || !c.email.includes('@'))
+    const invalidClients = targetClients.filter(c => !isValidEmail(c.email))
     if (invalidClients.length > 0) {
-      showToast('Un ou plusieurs clients n’ont pas de courriel valide.')
+      showToast('Un ou plusieurs courriels ne sont pas valides.')
       return
     }
 
@@ -1017,6 +1047,8 @@ const EmailCenter = ({ user }) => {
       setSubj('')
       setBody('')
       setSelectedClientIds([])
+      setManualEmail('')
+      setManualName('Test')
 
       showToast(
         emailMode === 'edge'
@@ -1065,7 +1097,7 @@ const EmailCenter = ({ user }) => {
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         <Btn onClick={autoGen}>📰 Générer newsletter semaine</Btn>
         <Btn
-          onClick={() => resetCompose({ nextMode: 'annonce', nextSubject: '', nextBody: '', nextRecipientMode: 'selected' })}
+          onClick={() => resetCompose({ nextMode: 'annonce', nextSubject: '', nextBody: '', nextRecipientMode: 'manual' })}
           v="a"
         >
           ✉️ Nouveau courriel
@@ -1116,12 +1148,42 @@ const EmailCenter = ({ user }) => {
             onChange={v => {
               setRecipientMode(v)
               if (v === 'all') setSelectedClientIds([])
+              if (v !== 'manual') {
+                setManualEmail('')
+                setManualName('Test')
+              }
             }}
             opts={[
+              { v: 'manual', l: 'Entrer un courriel manuellement' },
               { v: 'all', l: `Tous les clients (${clients.length})` },
               { v: 'selected', l: 'Choisir des clients précis' },
             ]}
           />
+
+          {recipientMode === 'manual' && (
+            <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13 }}>
+              <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .8, marginBottom: 10 }}>
+                Destinataire de test
+              </div>
+
+              <Inp
+                label="Nom"
+                value={manualName}
+                onChange={setManualName}
+                ph="Ex: Camille"
+                note="Optionnel. Utilisé pour personnaliser {prénom}."
+              />
+
+              <Inp
+                label="Courriel"
+                type="email"
+                value={manualEmail}
+                onChange={setManualEmail}
+                ph="exemple@email.com"
+                note="Ce courriel ne sera pas ajouté à la base de données. Il sert seulement à tester l’envoi."
+              />
+            </div>
+          )}
 
           {recipientMode === 'selected' && (
             <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13, maxHeight: 220, overflowY: 'auto' }}>
@@ -1187,9 +1249,11 @@ const EmailCenter = ({ user }) => {
 
           <div style={{ background: `${T.green}14`, border: `1px solid ${T.green}30`, borderRadius: 8, padding: '10px 14px', marginBottom: 13, color: T.greenHi, fontSize: 12, fontFamily: T.sans }}>
             📬 Envoi prévu à:{' '}
-            {recipientMode === 'all'
-              ? `tous les clients (${clients.length})`
-              : `${selectedClientIds.length} client(s) sélectionné(s)`}
+            {recipientMode === 'manual'
+              ? manualEmail || 'courriel manuel non défini'
+              : recipientMode === 'all'
+                ? `tous les clients (${clients.length})`
+                : `${selectedClientIds.length} client(s) sélectionné(s)`}
             <br />
             💡 Variables disponibles: {'{prénom}'}, {'{prenom}'}, {'{nom}'}, {'{email}'}.
           </div>
