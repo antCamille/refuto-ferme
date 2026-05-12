@@ -136,10 +136,11 @@ const ErrBox = ({ msg }) => (
 // ══════════════════════════════════════════════════════════════
 function useTable(tableName, filter = null) {
   const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!!tableName)
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
+    if (!tableName) return
     setLoading(true)
     let q = supabase.from(tableName).select('*').order('created_at', { ascending: false })
     if (filter) q = q.eq(filter.col, filter.val)
@@ -153,6 +154,7 @@ function useTable(tableName, filter = null) {
 
   // Real-time subscription — auto-save updates reflected instantly
   useEffect(() => {
+    if (!tableName) return
     const channel = supabase.channel(`realtime-${tableName}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => load())
       .subscribe()
@@ -990,12 +992,12 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true)
 
   // Supabase data for admin dashboard (only loaded when admin)
-  const { rows: orders } = useTable(user?.role === 'admin' ? 'orders' : '_none_')
-  const { rows: punches } = useTable(user?.role === 'admin' ? 'punch_records' : '_none_')
-  const { rows: subs } = useTable(user?.role === 'admin' ? 'subscriptions' : '_none_')
-  const { rows: inventory } = useTable(user?.role === 'admin' ? 'inventory' : '_none_')
-  const { rows: tasks } = useTable(user?.role === 'admin' ? 'tasks' : '_none_')
-  const { rows: allUsers } = useTable(user?.role === 'admin' ? 'users' : '_none_')
+  const { rows: orders } = useTable(user?.role === 'admin' ? 'orders' : null)
+  const { rows: punches } = useTable(user?.role === 'admin' ? 'punch_records' : null)
+  const { rows: subs } = useTable(user?.role === 'admin' ? 'subscriptions' : null)
+  const { rows: inventory } = useTable(user?.role === 'admin' ? 'inventory' : null)
+  const { rows: tasks } = useTable(user?.role === 'admin' ? 'tasks' : null)
+  const { rows: allUsers } = useTable(user?.role === 'admin' ? 'users' : null)
 
   // Restore session on load
   useEffect(() => {
