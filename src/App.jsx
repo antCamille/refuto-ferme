@@ -847,69 +847,363 @@ const SubsView = ({ user }) => {
 // ══════════════════════════════════════════════════════════════
 // EMAIL CENTER
 // ══════════════════════════════════════════════════════════════
+
 const EmailCenter = ({ user }) => {
   const { rows: emails, loading, insert } = useTable('emails_log')
   const { rows: inventory } = useTable('inventory')
   const { rows: allUsers } = useTable('users')
-  const clients = allUsers.filter(u => u.role === 'client')
+
+  const clients = allUsers.filter(u => u.role === 'client' && u.email)
+
   const [compose, setCompose] = useState(false)
   const [subj, setSubj] = useState('')
   const [body, setBody] = useState('')
   const [mode, setMode] = useState('newsletter')
+
+  const [recipientMode, setRecipientMode] = useState('all')
+  const [selectedClientIds, setSelectedClientIds] = useState([])
+
+  const [sending, setSending] = useState(false)
   const [toast, setToast] = useState('')
-  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  const showToast = msg => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 4000)
+  }
+
+  const emailMode = import.meta.env.VITE_EMAIL_MODE || 'log'
+
+  const htmlEscape = value =>
+    String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;')
+
+  const textToHtml = text =>
+    htmlEscape(text)
+      .replaceAll('\n', '<br />')
+
+  const personalize = (template, client) => {
+    const firstName = (client.name || '').split(' ')[0] || client.name || ''
+    return String(template || '')
+      .replaceAll('{prénom}', firstName)
+      .replaceAll('{prenom}', firstName)
+      .replaceAll('{nom}', client.name || '')
+      .replaceAll('{email}', client.email || '')
+  }
+
+  const getTargetClients = () => {
+    if (recipientMode === 'all') return clients
+
+    return clients.filter(c => selectedClientIds.includes(c.id))
+  }
+
+  const toggleClient = id => {
+    setSelectedClientIds(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    )
+  }
+
+  const resetCompose = ({ nextMode = 'annonce', nextSubject = '', nextBody = '', nextRecipientMode = 'selected' } = {}) => {
+    setMode(nextMode)
+    setSubj(nextSubject)
+    setBody(nextBody)
+    setRecipientMode(nextRecipientMode)
+    setSelectedClientIds([])
+    setCompose(true)
+  }
 
   const autoGen = () => {
     const avail = inventory.filter(i => i.available)
+
     setSubj('🌿 Nouveautés de la semaine — Refuto La Ferme Urbaine')
-    setBody(`Bonjour {prénom},\n\nVoici les disponibilités de cette semaine :\n\n${avail.map(i => `${i.emoji} ${i.name} — ${fmt$(i.price)}/${i.unit}\n   ${i.description}`).join('\n\n')}\n\nConnectez-vous pour passer votre commande.\n\nÀ bientôt!\nRefuto 🌿`)
-    setMode('newsletter'); setCompose(true)
+    setBody(
+      `Bonjour {prénom},\n\n` +
+      `Voici les disponibilités de cette semaine :\n\n` +
+      `${avail.map(i => `${i.emoji} ${i.name} — ${fmt$(i.price)}/${i.unit}\n   ${i.description || ''}`).join('\n\n')}\n\n` +
+      `Connectez-vous pour passer votre commande.\n\n` +
+      `À bientôt!\nRefuto 🌿`
+    )
+
+    setMode('newsletter')
+    setRecipientMode('all')
+    setSelectedClientIds([])
+    setCompose(true)
+  }
+
+  const sendViaEdgeFunction = async ({ recipients, subject, message, type }) => {
+    const payload = {
+      type,
+      subject,
+      fromName: 'Refuto La Ferme Urbaine',
+      recipients: recipients.map(client => ({
+        email: client.email,
+        name: client.name || client.email,
+        text: personalize(message, client),
+        html: textToHtml(personalize(message, client)),
+      })),
+    }
+
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: payload,
+    })
+
+    if (error) throw error
+    if (data?.error) throw new Error(data.error)
+
+    return data
   }
 
   const send = async () => {
-    const recipient = mode === 'newsletter' ? `Tous les clients (${clients.length})` : 'Sélection'
-    await insert({ type: mode, subject: subj, recipient, body, status: 'envoyé' })
-    setCompose(false); showToast(`Courriel envoyé à ${recipient} ✓`)
+    if (sending) return
+
+    const cleanSubject = subj.trim()
+    const cleanBody = body.trim()
+    const targetClients = getTargetClients()
+
+    if (!cleanSubject) {
+      showToast('Ajoutez un objet avant d’envoyer.')
+      return
+    }
+
+    if (!cleanBody) {
+      showToast('Ajoutez un message avant d’envoyer.')
+      return
+    }
+
+    if (targetClients.length === 0) {
+      showToast('Choisissez au moins un destinataire.')
+      return
+    }
+
+    const invalidClients = targetClients.filter(c => !c.email || !c.email.includes('@'))
+    if (invalidClients.length > 0) {
+      showToast('Un ou plusieurs clients n’ont pas de courriel valide.')
+      return
+    }
+
+    setSending(true)
+
+    try {
+      const recipientLabel =
+        recipientMode === 'all'
+          ? `Tous les clients (${targetClients.length})`
+          : targetClients.map(c => c.email).join(', ')
+
+      if (emailMode === 'edge') {
+        await sendViaEdgeFunction({
+          recipients: targetClients,
+          subject: cleanSubject,
+          message: cleanBody,
+          type: mode,
+        })
+      } else {
+        console.warn('VITE_EMAIL_MODE is not set to edge. Email was logged only.')
+      }
+
+      await insert({
+        type: mode,
+        subject: cleanSubject,
+        recipient: recipientLabel,
+        body: cleanBody,
+        status: emailMode === 'edge' ? 'envoyé' : 'log seulement',
+      })
+
+      setCompose(false)
+      setSubj('')
+      setBody('')
+      setSelectedClientIds([])
+
+      showToast(
+        emailMode === 'edge'
+          ? `Courriel réellement envoyé à ${targetClients.length} destinataire(s) ✓`
+          : `Courriel enregistré seulement. Activez VITE_EMAIL_MODE=edge pour l’envoi réel.`
+      )
+    } catch (e) {
+      console.error(e)
+
+      try {
+        await insert({
+          type: mode,
+          subject: cleanSubject,
+          recipient: targetClients.map(c => c.email).join(', '),
+          body: cleanBody,
+          status: 'erreur',
+        })
+      } catch (logError) {
+        console.error('Impossible de logger l’erreur email:', logError)
+      }
+
+      showToast(`Erreur d’envoi: ${e.message || 'Erreur inconnue'}`)
+    }
+
+    setSending(false)
   }
 
   if (loading) return <Spinner />
 
   return (
     <div>
-      {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}><Toast msg={toast} /></div>}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}>
+          <Toast msg={toast} />
+        </div>
+      )}
+
       <SecTitle icon="📧">Centre de communication</SecTitle>
+
+      {emailMode !== 'edge' && (
+        <div style={{ background: `${T.amber}14`, border: `1px solid ${T.amber}35`, borderRadius: 10, padding: '11px 14px', marginBottom: 16, color: T.amberHi, fontSize: 12, fontFamily: T.sans }}>
+          ⚠️ Mode courriel actuel: <strong>log seulement</strong>. Les messages seront enregistrés dans l’app, mais pas envoyés réellement tant que <strong>VITE_EMAIL_MODE=edge</strong> et la Edge Function <strong>send-email</strong> ne sont pas configurés.
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         <Btn onClick={autoGen}>📰 Générer newsletter semaine</Btn>
-        <Btn onClick={() => { setMode('annonce'); setSubj(''); setBody(''); setCompose(true) }} v="a">✉️ Nouveau courriel</Btn>
+        <Btn
+          onClick={() => resetCompose({ nextMode: 'annonce', nextSubject: '', nextBody: '', nextRecipientMode: 'selected' })}
+          v="a"
+        >
+          ✉️ Nouveau courriel
+        </Btn>
       </div>
+
       <div style={{ display: 'grid', gap: 10 }}>
         {emails.map(e => (
           <div key={e.id} style={{ background: T.card2, border: `1px solid ${T.border}`, borderRadius: 11, padding: '13px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 5 }}>
-                  <Badge label={e.type} /><span style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 13 }}>{e.subject}</span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 5, flexWrap: 'wrap' }}>
+                  <Badge label={e.type} />
+                  <span style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 13 }}>{e.subject}</span>
                 </div>
-                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans }}>À: {e.recipient} · {fmtD(e.sent_at)}</div>
+                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans }}>
+                  À: {e.recipient} · {fmtD(e.sent_at || e.created_at)}
+                </div>
               </div>
               <Badge label={e.status} />
             </div>
           </div>
         ))}
-        {emails.length === 0 && <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>Aucun courriel envoyé.</div>}
-      </div>
-      {compose && (
-        <Modal title="Composer un courriel" wide onClose={() => setCompose(false)}>
-          <Inp label="Type" value={mode} onChange={setMode} opts={[{ v: 'newsletter', l: '📰 Newsletter (tous les clients)' }, { v: 'facture', l: '📄 Facture' }, { v: 'annonce', l: '📣 Annonce' }]} />
-          <div style={{ background: `${T.green}14`, border: `1px solid ${T.green}30`, borderRadius: 8, padding: '10px 14px', marginBottom: 13, color: T.greenHi, fontSize: 12, fontFamily: T.sans }}>
-            📬 {mode === 'newsletter' ? `Envoi à tous les clients: ${clients.map(c => c.email).join(', ')}` : 'Définir les destinataires'}<br />
-            💡 Utilisez {'{prénom}'} pour personnaliser.
+
+        {emails.length === 0 && (
+          <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>
+            Aucun courriel envoyé.
           </div>
+        )}
+      </div>
+
+      {compose && (
+        <Modal title="Composer un courriel" wide onClose={() => !sending && setCompose(false)}>
+          <Inp
+            label="Type"
+            value={mode}
+            onChange={setMode}
+            opts={[
+              { v: 'newsletter', l: '📰 Newsletter' },
+              { v: 'facture', l: '📄 Facture' },
+              { v: 'annonce', l: '📣 Annonce' },
+            ]}
+          />
+
+          <Inp
+            label="Destinataires"
+            value={recipientMode}
+            onChange={v => {
+              setRecipientMode(v)
+              if (v === 'all') setSelectedClientIds([])
+            }}
+            opts={[
+              { v: 'all', l: `Tous les clients (${clients.length})` },
+              { v: 'selected', l: 'Choisir des clients précis' },
+            ]}
+          />
+
+          {recipientMode === 'selected' && (
+            <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13, maxHeight: 220, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .8 }}>
+                  Clients sélectionnés: {selectedClientIds.length}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Btn
+                    onClick={() => setSelectedClientIds(clients.map(c => c.id))}
+                    v="gh"
+                    sz="sm"
+                  >
+                    Tout cocher
+                  </Btn>
+                  <Btn
+                    onClick={() => setSelectedClientIds([])}
+                    v="gh"
+                    sz="sm"
+                  >
+                    Tout décocher
+                  </Btn>
+                </div>
+              </div>
+
+              {clients.length === 0 && (
+                <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans }}>
+                  Aucun client avec courriel dans la base de données.
+                </div>
+              )}
+
+              {clients.map(c => (
+                <label
+                  key={c.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 6px',
+                    borderBottom: `1px solid ${T.border}`,
+                    cursor: 'pointer',
+                    fontFamily: T.sans,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedClientIds.includes(c.id)}
+                    onChange={() => toggleClient(c.id)}
+                  />
+                  <div>
+                    <div style={{ color: T.cream, fontSize: 13, fontWeight: 700 }}>
+                      {c.name || 'Client sans nom'}
+                    </div>
+                    <div style={{ color: T.textMid, fontSize: 11 }}>
+                      {c.email}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div style={{ background: `${T.green}14`, border: `1px solid ${T.green}30`, borderRadius: 8, padding: '10px 14px', marginBottom: 13, color: T.greenHi, fontSize: 12, fontFamily: T.sans }}>
+            📬 Envoi prévu à:{' '}
+            {recipientMode === 'all'
+              ? `tous les clients (${clients.length})`
+              : `${selectedClientIds.length} client(s) sélectionné(s)`}
+            <br />
+            💡 Variables disponibles: {'{prénom}'}, {'{prenom}'}, {'{nom}'}, {'{email}'}.
+          </div>
+
           <Inp label="Objet" value={subj} onChange={setSubj} />
           <Inp label="Message" value={body} onChange={setBody} rows={10} />
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <Btn onClick={() => setCompose(false)} v="gh">Annuler</Btn>
-            <Btn onClick={send}>📤 Envoyer</Btn>
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <Btn onClick={() => setCompose(false)} v="gh" disabled={sending}>
+              Annuler
+            </Btn>
+            <Btn onClick={send} disabled={sending}>
+              {sending ? 'Envoi…' : '📤 Envoyer'}
+            </Btn>
           </div>
         </Modal>
       )}
