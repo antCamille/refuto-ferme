@@ -152,12 +152,16 @@ function useTable(tableName, filter = null) {
 
   useEffect(() => { load() }, [load])
 
-  // Poll every 8 seconds for updates (works with all Supabase key types)
+  // Refresh data every 30 seconds in background (non-disruptive)
   useEffect(() => {
     if (!tableName) return
-    const interval = setInterval(() => load(), 8000)
+    const interval = setInterval(() => {
+      // Only background-refresh rows, never reset UI state
+      supabase.from(tableName).select('*').order('created_at', { ascending: false })
+        .then(({ data }) => { if (data) setRows(data) })
+    }, 30000)
     return () => clearInterval(interval)
-  }, [tableName, load])
+  }, [tableName])
 
   const insert = async (row) => {
     const { error } = await supabase.from(tableName).insert(row)
