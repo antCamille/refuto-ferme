@@ -872,7 +872,7 @@ const EmailCenter = ({ user }) => {
     setTimeout(() => setToast(''), 4000)
   }
 
-  const emailMode = import.meta.env.VITE_EMAIL_MODE || 'log'
+  const emailMode = 'edge'
 
   const htmlEscape = value =>
     String(value || '')
