@@ -152,13 +152,11 @@ function useTable(tableName, filter = null) {
 
   useEffect(() => { load() }, [load])
 
-  // Real-time subscription — auto-save updates reflected instantly
+  // Poll every 8 seconds for updates (works with all Supabase key types)
   useEffect(() => {
     if (!tableName) return
-    const channel = supabase.channel(`realtime-${tableName}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => load())
-      .subscribe()
-    return () => supabase.removeChannel(channel)
+    const interval = setInterval(() => load(), 8000)
+    return () => clearInterval(interval)
   }, [tableName, load])
 
   const insert = async (row) => {
