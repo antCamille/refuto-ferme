@@ -1007,7 +1007,7 @@ const EmailCenter = ({ user }) => {
       try {
         await insert({ type: mode, subject: cleanSubject, recipient: targetClients.map(c => c.email).join(', '), body: cleanBody, status: 'erreur' })
       } catch (logError) {
-        console.error('Impossible de logger l'erreur email:', logError)
+        console.error("Impossible de logger l'erreur email:", logError)
       }
       showToast(`Erreur d'envoi: ${e.message || 'Erreur inconnue'}`)
     }
