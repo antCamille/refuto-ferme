@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase.js'
 import refutoLogo from './assets/refuto_logo.png'
-import { StripeCheckout } from './StripeCheckout.jsx'
 
 // ══════════════════════════════════════════════════════════════
 // THEME
