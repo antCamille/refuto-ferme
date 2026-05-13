@@ -593,13 +593,35 @@ const Shop = ({ user }) => {
 const Timesheets = ({ user }) => {
   const filter = user.role === 'employee' ? { col: 'user_id', val: user.id } : null
   const { rows, loading, error, insert, update, remove } = useTable('punch_records', filter)
-  const { rows: allUsers } = useTable('users')
+  const { rows: allUsers, reload: reloadUsers } = useTable('users')
   const employees = allUsers.filter(u => u.role === 'employee')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ userId: '', date: TODAY, pIn: '08:00', pOut: '16:00', note: '' })
+  const [empModal, setEmpModal] = useState(false)
+  const [empForm, setEmpForm] = useState({ name: '', email: '', password: '', phone: '', position: '', hourly_rate: '', avatar: '👩‍🌾' })
+  const [empCreating, setEmpCreating] = useState(false)
   const [toast, setToast] = useState('')
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const isAdmin = user.role === 'admin'
+  const setEmpF = (k, v) => setEmpForm(f => ({ ...f, [k]: v }))
+
+  const createEmployee = async () => {
+    if (!empForm.name.trim() || !empForm.email.trim() || !empForm.password.trim()) return
+    setEmpCreating(true)
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke('admin-create-client', {
+        body: { name: empForm.name.trim(), email: empForm.email.trim(), password: empForm.password, phone: empForm.phone || null, position: empForm.position || null, hourly_rate: empForm.hourly_rate ? Number(empForm.hourly_rate) : null, avatar: empForm.avatar || '👩‍🌾', role: 'employee' },
+      })
+      if (fnErr || data?.error) throw new Error(fnErr?.message || data?.error)
+      setEmpModal(false); setEmpForm({ name: '', email: '', password: '', phone: '', position: '', hourly_rate: '', avatar: '👩‍🌾' })
+      showToast('Employé(e) ajouté(e) ✓')
+      reloadUsers()
+    } catch (err) {
+      showToast('Erreur: ' + err.message)
+    } finally {
+      setEmpCreating(false)
+    }
+  }
 
   const active = rows.find(p => p.user_id === user.id && !p.punch_out)
 
@@ -656,7 +678,8 @@ const Timesheets = ({ user }) => {
       </div>
 
       {isAdmin && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginBottom: 14 }}>
+          <Btn onClick={() => { setEmpForm({ name: '', email: '', password: '', phone: '', position: '', hourly_rate: '', avatar: '👩‍🌾' }); setEmpModal(true) }}>+ Ajouter un(e) employé(e)</Btn>
           <Btn onClick={() => { setForm({ userId: employees[0]?.id || '', date: TODAY, pIn: '08:00', pOut: '16:00', note: '' }); setModal(true) }} v="a">+ Entrée manuelle</Btn>
         </div>
       )}
@@ -692,6 +715,31 @@ const Timesheets = ({ user }) => {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <Btn onClick={() => setModal(false)} v="gh">Annuler</Btn>
             <Btn onClick={addManual} v="a">Enregistrer</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {empModal && (
+        <Modal title="Ajouter un(e) employé(e)" onClose={() => setEmpModal(false)}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Inp label="Nom complet *" value={empForm.name} onChange={v => setEmpF('name', v)} ph="Sophie Martin" />
+            <Inp label="Avatar (emoji)" value={empForm.avatar} onChange={v => setEmpF('avatar', v)} ph="👩‍🌾" />
+          </div>
+          <Inp label="Courriel *" type="email" value={empForm.email} onChange={v => setEmpF('email', v)} ph="sophie@refuto.ca" />
+          <Inp label="Mot de passe temporaire *" type="password" value={empForm.password} onChange={v => setEmpF('password', v)} ph="À communiquer à l'employé(e)" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Inp label="Poste" value={empForm.position} onChange={v => setEmpF('position', v)} ph="Maraîcher, Livreur…" />
+            <Inp label="Taux horaire ($)" type="number" value={empForm.hourly_rate} onChange={v => setEmpF('hourly_rate', v)} ph="18.00" />
+          </div>
+          <Inp label="Téléphone" value={empForm.phone} onChange={v => setEmpF('phone', v)} ph="514-555-0000" />
+          <div style={{ background: `${T.amber}14`, border: `1px solid ${T.amber}40`, borderRadius: 8, padding: '10px 13px', color: T.amber, fontSize: 11, fontFamily: T.sans }}>
+            💡 L'employé(e) pourra se connecter avec ce courriel et ce mot de passe temporaire.
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+            <Btn onClick={() => setEmpModal(false)} v="gh">Annuler</Btn>
+            <Btn onClick={createEmployee} disabled={empCreating || !empForm.name.trim() || !empForm.email.trim() || !empForm.password.trim()}>
+              {empCreating ? 'Création…' : 'Créer le compte ✓'}
+            </Btn>
           </div>
         </Modal>
       )}
