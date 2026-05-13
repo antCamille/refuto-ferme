@@ -980,8 +980,8 @@ const EmailCenter = ({ user }) => {
     const cleanBody = body.trim()
     const targetClients = getTargetClients()
 
-    if (!cleanSubject) { showToast('Ajoutez un objet avant d'envoyer.'); return }
-    if (!cleanBody) { showToast('Ajoutez un message avant d'envoyer.'); return }
+    if (!cleanSubject) { showToast("Ajoutez un objet avant d'envoyer."); return }
+    if (!cleanBody) { showToast("Ajoutez un message avant d'envoyer."); return }
     if (targetClients.length === 0) { showToast('Choisissez au moins un destinataire.'); return }
     const invalidClients = targetClients.filter(c => !isValidEmail(c.email))
     if (invalidClients.length > 0) { showToast('Un ou plusieurs courriels ne sont pas valides.'); return }
