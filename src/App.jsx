@@ -1184,10 +1184,14 @@ const ClientsView = ({ user }) => {
 // ══════════════════════════════════════════════════════════════
 // PAYMENTS (Admin)
 // ══════════════════════════════════════════════════════════════
+const EMPTY_ADD = { client_name: '', amount: '', description: '', date: TODAY, note: '' }
+
 const PaymentsAdmin = () => {
-  const { rows, loading, error, update } = useTable('orders')
+  const { rows, loading, error, update, insert } = useTable('orders')
   const [filter, setFilter] = useState('tous')
-  const [modal, setModal] = useState(null)
+  const [modal, setModal] = useState(null)       // confirm payment on existing order
+  const [addModal, setAddModal] = useState(false) // new manual payment
+  const [addForm, setAddForm] = useState(EMPTY_ADD)
   const [payDate, setPayDate] = useState(TODAY)
   const [payNote, setPayNote] = useState('')
   const [toast, setToast] = useState('')
@@ -1207,6 +1211,26 @@ const PaymentsAdmin = () => {
     showToast('Paiement enregistré ✓')
   }
 
+  const addPayment = async () => {
+    if (!addForm.client_name.trim() || !addForm.amount) return
+    await insert({
+      client_name: addForm.client_name.trim(),
+      client_email: '',
+      items: addForm.description.trim() ? [{ name: addForm.description.trim(), price: Number(addForm.amount), qty: 1, emoji: '💵' }] : [],
+      total: Number(addForm.amount),
+      status: 'livré',
+      pay_method: 'comptant',
+      pay_status: 'payé',
+      delivery_note: addForm.note.trim() || null,
+      date: addForm.date,
+      invoice_sent: false,
+    })
+    setAddModal(false); setAddForm(EMPTY_ADD)
+    showToast('Paiement manuel ajouté ✓')
+  }
+
+  const setAdd = (k, v) => setAddForm(f => ({ ...f, [k]: v }))
+
   const FILTERS = [
     { v: 'tous', l: 'Tous' },
     { v: 'en attente', l: 'En attente' },
@@ -1220,7 +1244,11 @@ const PaymentsAdmin = () => {
   return (
     <div>
       {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}><Toast msg={toast} /></div>}
-      <SecTitle icon="💰">Suivi des paiements</SecTitle>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+        <div style={{ fontFamily: T.font, color: T.cream, fontSize: 22, fontWeight: 700 }}>💰 Suivi des paiements</div>
+        <Btn onClick={() => { setAddForm(EMPTY_ADD); setAddModal(true) }} v="g">+ Ajouter un paiement</Btn>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 20 }}>
         <Stat emoji="✅" val={fmt$(totalPayé)} label="Encaissé" />
@@ -1252,7 +1280,7 @@ const PaymentsAdmin = () => {
                   <Badge label={o.pay_method === 'carte' ? '💳 Carte' : '💵 Comptant'} />
                 </div>
                 <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, marginBottom: 3 }}>
-                  {(o.items || []).map(i => `${i.emoji} ${i.name} ×${i.qty}`).join(' · ')}
+                  {(o.items || []).map(i => `${i.emoji || ''} ${i.name} ×${i.qty}`).join(' · ')}
                 </div>
                 {o.delivery_note && <div style={{ color: T.textDim, fontSize: 10, marginTop: 3 }}>📝 {o.delivery_note}</div>}
                 <div style={{ color: T.textDim, fontSize: 10, marginTop: 4 }}>{fmtD(o.date)} · #{o.id.slice(0, 8)}</div>
@@ -1275,12 +1303,13 @@ const PaymentsAdmin = () => {
         {filtered.length === 0 && <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>Aucun paiement dans cette catégorie.</div>}
       </div>
 
+      {/* Confirm payment on existing order */}
       {modal && (
         <Modal title="Enregistrer un paiement" onClose={() => setModal(null)}>
           <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
             <div style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 14 }}>{modal.client_name}</div>
             <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans, marginTop: 3 }}>
-              {(modal.items || []).map(i => `${i.emoji} ${i.name} ×${i.qty}`).join(' · ')}
+              {(modal.items || []).map(i => `${i.emoji || ''} ${i.name} ×${i.qty}`).join(' · ')}
             </div>
             <div style={{ color: T.greenHi, fontWeight: 800, fontFamily: T.font, fontSize: 16, marginTop: 6 }}>{fmt$(modal.total)}</div>
           </div>
@@ -1289,6 +1318,21 @@ const PaymentsAdmin = () => {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <Btn onClick={() => setModal(null)} v="gh">Annuler</Btn>
             <Btn onClick={confirmPayment}>Confirmer le paiement ✓</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add a brand-new manual payment */}
+      {addModal && (
+        <Modal title="Ajouter un paiement manuel" onClose={() => setAddModal(false)}>
+          <Inp label="Nom du client *" value={addForm.client_name} onChange={v => setAdd('client_name', v)} ph="Ex: Jean Tremblay" />
+          <Inp label="Montant ($) *" type="number" value={addForm.amount} onChange={v => setAdd('amount', v)} ph="0.00" />
+          <Inp label="Description" value={addForm.description} onChange={v => setAdd('description', v)} ph="Ex: Panier de légumes, abonnement…" />
+          <Inp label="Date du paiement" type="date" value={addForm.date} onChange={v => setAdd('date', v)} />
+          <Inp label="Note interne (optionnel)" value={addForm.note} onChange={v => setAdd('note', v)} ph="Remarques, référence…" rows={2} />
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <Btn onClick={() => setAddModal(false)} v="gh">Annuler</Btn>
+            <Btn onClick={addPayment} disabled={!addForm.client_name.trim() || !addForm.amount}>Enregistrer ✓</Btn>
           </div>
         </Modal>
       )}
