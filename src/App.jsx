@@ -1020,7 +1020,7 @@ const EmailCenter = ({ user }) => {
   const clearEmailLogUI = () => {
     if (emails.length === 0) { showToast('Aucun log à masquer.'); return }
     setHiddenEmailLogIds(emails.map(e => e.id))
-    showToast('Historique masqué dans l'interface seulement ✓')
+    showToast("Historique masqué dans l'interface seulement ✓")
   }
 
   const restoreEmailLogUI = () => {
