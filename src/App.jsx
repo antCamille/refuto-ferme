@@ -1,18 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase.js'
+import refutoLogo from './assets/refuto_logo.png'
 
 // ══════════════════════════════════════════════════════════════
 // THEME
 // ══════════════════════════════════════════════════════════════
 const T = {
-  bg: '#0b0d08', card: '#13160f', card2: '#1a1e14',
-  border: '#252c1c', borderHi: '#3a4428',
-  green: '#6a9e3f', greenHi: '#8ec85a', greenDim: '#3d5c24',
-  amber: '#c47c1a', amberHi: '#e09030', amberDim: '#7a4e10',
-  red: '#c0392b', redDim: '#7a2418',
-  blue: '#3b7dd8', blueDim: '#1e4080',
-  cream: '#f0e8d0', creamMid: '#a89870',
-  text: '#ddd8c0', textMid: '#8a8060', textDim: '#3a3828',
+  bg: '#ffffff',
+  card: '#f4f8f1',
+  card2: '#eaf1e5',
+  border: '#c4d9b4',
+  borderHi: '#8ab878',
+  green: '#228B22',
+  greenHi: '#1a5c1a',
+  greenDim: '#5aba5a',
+  amber: '#b87010',
+  amberHi: '#d08020',
+  amberDim: '#7a4e10',
+  red: '#b02020',
+  redDim: '#d04040',
+  blue: '#1558c0',
+  blueDim: '#4a8adc',
+  cream: '#1a3820',
+  creamMid: '#3a5c3a',
+  text: '#1c2c1c',
+  textMid: '#4a6a4a',
+  textDim: '#8aaa8a',
   font: "'Lora', Georgia, serif",
   sans: "'DM Sans', sans-serif",
 }
@@ -60,11 +73,11 @@ const Stat = ({ emoji, val, label, color, sub }) => (
 
 const Btn = ({ children, onClick, v = 'g', sz = 'md', full, disabled, style: sx }) => {
   const vs = {
-    g: { background: `linear-gradient(135deg,${T.green},${T.greenDim})`, color: T.cream, border: 'none' },
-    a: { background: `linear-gradient(135deg,${T.amber},${T.amberDim})`, color: T.cream, border: 'none' },
-    r: { background: T.redDim + '44', color: T.red, border: `1px solid ${T.redDim}66` },
+    g: { background: `linear-gradient(135deg,${T.green},${T.greenHi})`, color: '#ffffff', border: 'none' },
+    a: { background: `linear-gradient(135deg,${T.amber},${T.amberDim})`, color: '#ffffff', border: 'none' },
+    r: { background: '#fde8e8', color: T.red, border: `1px solid #f0c0c0` },
     gh: { background: 'transparent', color: T.textMid, border: `1px solid ${T.border}` },
-    b: { background: `linear-gradient(135deg,${T.blue},${T.blueDim})`, color: T.cream, border: 'none' },
+    b: { background: `linear-gradient(135deg,${T.blue},${T.blueDim})`, color: '#ffffff', border: 'none' },
   }
   const szs = { sm: { padding: '5px 11px', fontSize: 11 }, md: { padding: '9px 17px', fontSize: 13 }, lg: { padding: '13px 26px', fontSize: 15 } }
   const s = vs[v] || vs.g
@@ -88,12 +101,12 @@ const Inp = ({ label, type = 'text', value, onChange, opts, rows, ph, note }) =>
     {note && <div style={{ color: T.textMid, fontSize: 11, marginTop: 4, fontFamily: T.sans }}>{note}</div>}
   </div>
 )
-const iSt = { width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', fontFamily: T.sans, outline: 'none' }
+const iSt = { width: '100%', background: '#ffffff', border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', fontFamily: T.sans, outline: 'none' }
 
 const Modal = ({ title, onClose, children, wide }) => (
   <div onClick={e => e.target === e.currentTarget && onClose()}
-    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.8)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-    <div style={{ background: T.card, border: `1px solid ${T.borderHi}`, borderRadius: 18, width: '100%', maxWidth: wide ? 720 : 520, maxHeight: '94vh', overflowY: 'auto', padding: '24px 26px' }}>
+    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={{ background: T.bg, border: `1px solid ${T.borderHi}`, borderRadius: 18, width: '100%', maxWidth: wide ? 720 : 520, maxHeight: '94vh', overflowY: 'auto', padding: '24px 26px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: `1px solid ${T.border}`, paddingBottom: 14 }}>
         <h3 style={{ margin: 0, color: T.cream, fontSize: 17, fontFamily: T.font }}>{title}</h3>
         <Btn onClick={onClose} v="gh" sz="sm">✕</Btn>
@@ -113,7 +126,7 @@ const SecTitle = ({ icon, children }) => (
 const Divider = () => <div style={{ borderTop: `1px solid ${T.border}`, margin: '14px 0' }} />
 
 const Toast = ({ msg }) => (
-  <div style={{ background: T.greenDim, border: `1px solid ${T.green}`, borderRadius: 10, padding: '11px 18px', color: T.cream, fontFamily: T.sans, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,.5)' }}>
+  <div style={{ background: T.green, border: `1px solid ${T.greenHi}`, borderRadius: 10, padding: '11px 18px', color: '#ffffff', fontFamily: T.sans, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,.15)' }}>
     {msg}
   </div>
 )
@@ -126,7 +139,7 @@ const Spinner = () => (
 )
 
 const ErrBox = ({ msg }) => (
-  <div style={{ background: T.redDim + '33', border: `1px solid ${T.red}55`, borderRadius: 10, padding: '12px 16px', color: T.red, fontFamily: T.sans, fontSize: 13, margin: '12px 0' }}>
+  <div style={{ background: '#fde8e8', border: `1px solid #f0c0c0`, borderRadius: 10, padding: '12px 16px', color: T.red, fontFamily: T.sans, fontSize: 13, margin: '12px 0' }}>
     ⚠️ {msg}
   </div>
 )
@@ -152,11 +165,9 @@ function useTable(tableName, filter = null) {
 
   useEffect(() => { load() }, [load])
 
-  // Refresh data every 30 seconds in background (non-disruptive)
   useEffect(() => {
     if (!tableName) return
     const interval = setInterval(() => {
-      // Only background-refresh rows, never reset UI state
       supabase.from(tableName).select('*').order('created_at', { ascending: false })
         .then(({ data }) => { if (data) setRows(data) })
     }, 30000)
@@ -192,7 +203,6 @@ const Login = ({ onLogin }) => {
     setLoading(true); setErr('')
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd })
     if (error) { setErr(error.message); setLoading(false); return }
-    // Fetch user profile
     const { data: profile } = await supabase.from('users').select('*').eq('auth_id', data.user.id).single()
     if (profile) onLogin(profile)
     else setErr('Profil introuvable. Contactez l\'administrateur.')
@@ -203,9 +213,9 @@ const Login = ({ onLogin }) => {
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 56, marginBottom: 10 }}>🌿</div>
-          <div style={{ fontFamily: T.font, color: T.cream, fontSize: 30, fontWeight: 700 }}>Refuto</div>
-          <div style={{ fontFamily: T.sans, color: T.greenHi, fontSize: 12, letterSpacing: 4, textTransform: 'uppercase', marginTop: 3 }}>La Ferme Urbaine</div>
+          <img src={refutoLogo} alt="REFŪTŌ" style={{ height: 72, marginBottom: 10 }} />
+          <div style={{ fontFamily: T.font, color: T.cream, fontSize: 32, fontWeight: 700, letterSpacing: 2 }}>REFŪTŌ</div>
+          <div style={{ fontFamily: T.sans, color: T.green, fontSize: 12, letterSpacing: 4, textTransform: 'uppercase', marginTop: 4 }}>La Ferme Urbaine</div>
         </div>
         <Card>
           <Inp label="Courriel" type="email" value={email} onChange={setEmail} ph="vous@refuto.ca" />
@@ -240,9 +250,9 @@ const AdminDash = ({ orders, punches, subs, inventory, tasks, users, setTab }) =
 
   return (
     <div>
-      <div style={{ background: `linear-gradient(135deg,${T.card2},#0e1209)`, border: `1px solid ${T.borderHi}`, borderRadius: 16, padding: '22px 24px', marginBottom: 20 }}>
-        <div style={{ fontSize: 32, marginBottom: 6 }}>🌿</div>
-        <div style={{ fontFamily: T.font, color: T.cream, fontSize: 24, fontWeight: 700 }}>Refuto La Ferme Urbaine</div>
+      <div style={{ background: `linear-gradient(135deg,${T.card},${T.card2})`, border: `1px solid ${T.borderHi}`, borderRadius: 16, padding: '22px 24px', marginBottom: 20 }}>
+        <img src={refutoLogo} alt="REFŪTŌ" style={{ height: 44, marginBottom: 6 }} />
+        <div style={{ fontFamily: T.font, color: T.cream, fontSize: 24, fontWeight: 700, letterSpacing: 1 }}>REFŪTŌ La Ferme Urbaine</div>
         <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans, marginTop: 5 }}>Tableau de bord propriétaire · {fmtD(TODAY)}</div>
       </div>
 
@@ -255,10 +265,10 @@ const AdminDash = ({ orders, punches, subs, inventory, tasks, users, setTab }) =
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 12, marginBottom: 20, marginTop: 16 }}>
         <Stat emoji="📬" val={newOrders.length} label="Nouvelles commandes" color={T.amber} />
         <Stat emoji="💰" val={fmt$(rev)} label="Recettes perçues" />
-        <Stat emoji="⏳" val={fmt$(pending)} label="En attente paiement" color={T.amber} />
+        <Stat emoji="⏳" val={fmt$(pending)} label="En attente paiement" color={T.amberHi} />
         <Stat emoji="🔄" val={activeSubs.length} label="Abonnements actifs" color={T.amberHi} />
-        <Stat emoji="👥" val={clients.length} label="Clients" color={T.cream} />
-        <Stat emoji="⏱" val={totalHrs.toFixed(1) + 'h'} label="Heures équipe" color={T.creamMid} />
+        <Stat emoji="👥" val={clients.length} label="Clients" color={T.text} />
+        <Stat emoji="⏱" val={totalHrs.toFixed(1) + 'h'} label="Heures équipe" color={T.textMid} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -368,7 +378,7 @@ const Inventory = ({ user }) => {
                 <span style={{ fontSize: 30 }}>{i.emoji}</span>
                 <div>
                   <div style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 14 }}>{i.name} <span style={{ color: T.textMid, fontSize: 11, fontWeight: 400 }}>— {i.category}</span></div>
-                  <div style={{ color: T.amber, fontSize: 13, fontFamily: T.sans }}>{fmt$(i.price)} / {i.unit} · Stock: <span style={{ color: i.stock <= 10 ? T.red : T.greenHi }}>{i.stock}</span></div>
+                  <div style={{ color: T.amber, fontSize: 13, fontFamily: T.sans }}>{fmt$(i.price)} / {i.unit} · Stock: <span style={{ color: i.stock <= 10 ? T.red : T.green }}>{i.stock}</span></div>
                   {i.description && <div style={{ color: T.textMid, fontSize: 11 }}>{i.description}</div>}
                 </div>
               </div>
@@ -423,7 +433,7 @@ const Orders = ({ user }) => {
   const del = async id => { await remove(id); showToast('Commande supprimée') }
 
   const sendInvoice = async (order) => {
-    await emailTable.insert({ type: 'facture', subject: `Votre facture Refuto #${order.id.slice(0,8)}`, recipient: order.client_email, body: `Commande de ${fmt$(order.total)}`, status: 'envoyé' })
+    await emailTable.insert({ type: 'facture', subject: `Votre facture REFŪTŌ #${order.id.slice(0,8)}`, recipient: order.client_email, body: `Commande de ${fmt$(order.total)}`, status: 'envoyé' })
     await update(order.id, { invoice_sent: true })
     showToast(`Facture envoyée à ${order.client_email} ✓`)
   }
@@ -620,7 +630,7 @@ const Timesheets = ({ user }) => {
         <Card style={{ textAlign: 'center', marginBottom: 22, padding: '30px 24px' }}>
           {active ? (
             <>
-              <div style={{ color: T.greenHi, fontSize: 12, fontFamily: T.sans, fontWeight: 700, letterSpacing: 3, marginBottom: 10 }}>▶ EN SERVICE</div>
+              <div style={{ color: T.green, fontSize: 12, fontFamily: T.sans, fontWeight: 700, letterSpacing: 3, marginBottom: 10 }}>▶ EN SERVICE</div>
               <div style={{ fontFamily: T.font, color: T.greenHi, fontSize: 36, fontWeight: 700, marginBottom: 14 }}>
                 {fmtT(active.punch_in)} →
               </div>
@@ -650,7 +660,7 @@ const Timesheets = ({ user }) => {
         {rows.map(p => (
           <div key={p.id} style={{ background: T.card2, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
-              {isAdmin && <div style={{ color: T.greenHi, fontSize: 12, fontFamily: T.sans, fontWeight: 700, marginBottom: 3 }}>{p.user_name}</div>}
+              {isAdmin && <div style={{ color: T.green, fontSize: 12, fontFamily: T.sans, fontWeight: 700, marginBottom: 3 }}>{p.user_name}</div>}
               <div style={{ color: T.cream, fontWeight: 600, fontFamily: T.sans, fontSize: 13 }}>{fmtD(p.punch_in)}</div>
               <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans }}>{fmtT(p.punch_in)} → {p.punch_out ? fmtT(p.punch_out) : 'En cours…'}{p.note ? ` · ${p.note}` : ''}</div>
             </div>
@@ -792,7 +802,7 @@ const SubsView = ({ user }) => {
     <div>
       {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}><Toast msg={toast} /></div>}
       <SecTitle icon="🔄">Abonnements</SecTitle>
-      <div style={{ background: `${T.amber}14`, border: `1px solid ${T.amber}30`, borderRadius: 10, padding: '11px 14px', marginBottom: 16, color: T.amberHi, fontSize: 12, fontFamily: T.sans }}>
+      <div style={{ background: `${T.amber}18`, border: `1px solid ${T.amber}40`, borderRadius: 10, padding: '11px 14px', marginBottom: 16, color: T.amber, fontSize: 12, fontFamily: T.sans }}>
         💳 Paiement automatique (carte) ou comptant à la livraison · Prix libres ou à définir ultérieurement.
       </div>
       {isAdmin && <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
@@ -867,8 +877,6 @@ const EmailCenter = ({ user }) => {
   const [sending, setSending] = useState(false)
   const [toast, setToast] = useState('')
 
-  // Cache les logs uniquement dans l'interface admin actuelle.
-  // Rien n'est supprimé dans Supabase.
   const [hiddenEmailLogIds, setHiddenEmailLogIds] = useState([])
 
   const showToast = msg => {
@@ -904,41 +912,22 @@ const EmailCenter = ({ user }) => {
 
   const getTargetClients = () => {
     if (recipientMode === 'all') return clients
-
-    if (recipientMode === 'selected') {
-      return clients.filter(c => selectedClientIds.includes(c.id))
-    }
-
+    if (recipientMode === 'selected') return clients.filter(c => selectedClientIds.includes(c.id))
     if (recipientMode === 'manual') {
       const cleanEmail = manualEmail.trim()
-
       if (!cleanEmail) return []
-
-      return [{
-        id: 'manual-test-recipient',
-        name: manualName.trim() || 'Test',
-        email: cleanEmail,
-        role: 'manual',
-      }]
+      return [{ id: 'manual-test-recipient', name: manualName.trim() || 'Test', email: cleanEmail, role: 'manual' }]
     }
-
     return []
   }
 
   const toggleClient = id => {
     setSelectedClientIds(prev =>
-      prev.includes(id)
-        ? prev.filter(x => x !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
   }
 
-  const resetCompose = ({
-    nextMode = 'annonce',
-    nextSubject = '',
-    nextBody = '',
-    nextRecipientMode = 'manual',
-  } = {}) => {
+  const resetCompose = ({ nextMode = 'annonce', nextSubject = '', nextBody = '', nextRecipientMode = 'manual' } = {}) => {
     setMode(nextMode)
     setSubj(nextSubject)
     setBody(nextBody)
@@ -951,16 +940,14 @@ const EmailCenter = ({ user }) => {
 
   const autoGen = () => {
     const avail = inventory.filter(i => i.available)
-
-    setSubj('🌿 Nouveautés de la semaine — Refuto La Ferme Urbaine')
+    setSubj('🌿 Nouveautés de la semaine — REFŪTŌ La Ferme Urbaine')
     setBody(
       `Bonjour {prénom},\n\n` +
       `Voici les disponibilités de cette semaine :\n\n` +
       `${avail.map(i => `${i.emoji} ${i.name} — ${fmt$(i.price)}/${i.unit}\n   ${i.description || ''}`).join('\n\n')}\n\n` +
       `Connectez-vous pour passer votre commande.\n\n` +
-      `À bientôt!\nRefuto 🌿`
+      `À bientôt!\nREFŪTŌ 🌿`
     )
-
     setMode('newsletter')
     setRecipientMode(clients.length > 0 ? 'all' : 'manual')
     setSelectedClientIds([])
@@ -973,7 +960,7 @@ const EmailCenter = ({ user }) => {
     const payload = {
       type,
       subject,
-      fromName: 'Refuto La Ferme Urbaine',
+      fromName: 'REFŪTŌ La Ferme Urbaine',
       recipients: recipients.map(client => ({
         email: client.email,
         name: client.name || client.email,
@@ -981,47 +968,25 @@ const EmailCenter = ({ user }) => {
         html: textToHtml(personalize(message, client)),
       })),
     }
-
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: payload,
-    })
-
+    const { data, error } = await supabase.functions.invoke('send-email', { body: payload })
     if (error) throw error
     if (data?.error) throw new Error(data.error)
-
     return data
   }
 
   const send = async () => {
     if (sending) return
-
     const cleanSubject = subj.trim()
     const cleanBody = body.trim()
     const targetClients = getTargetClients()
 
-    if (!cleanSubject) {
-      showToast('Ajoutez un objet avant d’envoyer.')
-      return
-    }
-
-    if (!cleanBody) {
-      showToast('Ajoutez un message avant d’envoyer.')
-      return
-    }
-
-    if (targetClients.length === 0) {
-      showToast('Choisissez au moins un destinataire.')
-      return
-    }
-
+    if (!cleanSubject) { showToast('Ajoutez un objet avant d'envoyer.'); return }
+    if (!cleanBody) { showToast('Ajoutez un message avant d'envoyer.'); return }
+    if (targetClients.length === 0) { showToast('Choisissez au moins un destinataire.'); return }
     const invalidClients = targetClients.filter(c => !isValidEmail(c.email))
-    if (invalidClients.length > 0) {
-      showToast('Un ou plusieurs courriels ne sont pas valides.')
-      return
-    }
+    if (invalidClients.length > 0) { showToast('Un ou plusieurs courriels ne sont pas valides.'); return }
 
     setSending(true)
-
     try {
       const recipientLabel =
         recipientMode === 'all'
@@ -1029,54 +994,23 @@ const EmailCenter = ({ user }) => {
           : targetClients.map(c => c.email).join(', ')
 
       if (emailMode === 'edge') {
-        await sendViaEdgeFunction({
-          recipients: targetClients,
-          subject: cleanSubject,
-          message: cleanBody,
-          type: mode,
-        })
+        await sendViaEdgeFunction({ recipients: targetClients, subject: cleanSubject, message: cleanBody, type: mode })
       } else {
         console.warn('VITE_EMAIL_MODE is not set to edge. Email was logged only.')
       }
 
-      await insert({
-        type: mode,
-        subject: cleanSubject,
-        recipient: recipientLabel,
-        body: cleanBody,
-        status: emailMode === 'edge' ? 'envoyé' : 'log seulement',
-      })
-
-      setCompose(false)
-      setSubj('')
-      setBody('')
-      setSelectedClientIds([])
-      setManualEmail('')
-      setManualName('Test')
-
-      showToast(
-        emailMode === 'edge'
-          ? `Courriel réellement envoyé à ${targetClients.length} destinataire(s) ✓`
-          : `Courriel enregistré seulement. Activez VITE_EMAIL_MODE=edge pour l’envoi réel.`
-      )
+      await insert({ type: mode, subject: cleanSubject, recipient: recipientLabel, body: cleanBody, status: emailMode === 'edge' ? 'envoyé' : 'log seulement' })
+      setCompose(false); setSubj(''); setBody(''); setSelectedClientIds([]); setManualEmail(''); setManualName('Test')
+      showToast(emailMode === 'edge' ? `Courriel réellement envoyé à ${targetClients.length} destinataire(s) ✓` : `Courriel enregistré seulement. Activez VITE_EMAIL_MODE=edge pour l'envoi réel.`)
     } catch (e) {
       console.error(e)
-
       try {
-        await insert({
-          type: mode,
-          subject: cleanSubject,
-          recipient: targetClients.map(c => c.email).join(', '),
-          body: cleanBody,
-          status: 'erreur',
-        })
+        await insert({ type: mode, subject: cleanSubject, recipient: targetClients.map(c => c.email).join(', '), body: cleanBody, status: 'erreur' })
       } catch (logError) {
-        console.error('Impossible de logger l’erreur email:', logError)
+        console.error('Impossible de logger l'erreur email:', logError)
       }
-
-      showToast(`Erreur d’envoi: ${e.message || 'Erreur inconnue'}`)
+      showToast(`Erreur d'envoi: ${e.message || 'Erreur inconnue'}`)
     }
-
     setSending(false)
   }
 
@@ -1084,13 +1018,9 @@ const EmailCenter = ({ user }) => {
   const hiddenCount = emails.length - visibleEmails.length
 
   const clearEmailLogUI = () => {
-    if (emails.length === 0) {
-      showToast('Aucun log à masquer.')
-      return
-    }
-
+    if (emails.length === 0) { showToast('Aucun log à masquer.'); return }
     setHiddenEmailLogIds(emails.map(e => e.id))
-    showToast('Historique masqué dans l’interface seulement ✓')
+    showToast('Historique masqué dans l'interface seulement ✓')
   }
 
   const restoreEmailLogUI = () => {
@@ -1102,41 +1032,20 @@ const EmailCenter = ({ user }) => {
 
   return (
     <div>
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}>
-          <Toast msg={toast} />
-        </div>
-      )}
-
+      {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}><Toast msg={toast} /></div>}
       <SecTitle icon="📧">Centre de communication</SecTitle>
 
       {emailMode !== 'edge' && (
-        <div style={{ background: `${T.amber}14`, border: `1px solid ${T.amber}35`, borderRadius: 10, padding: '11px 14px', marginBottom: 16, color: T.amberHi, fontSize: 12, fontFamily: T.sans }}>
-          ⚠️ Mode courriel actuel: <strong>log seulement</strong>. Les messages seront enregistrés dans l’app, mais pas envoyés réellement tant que <strong>VITE_EMAIL_MODE=edge</strong> et la Edge Function <strong>send-email</strong> ne sont pas configurés.
+        <div style={{ background: `${T.amber}18`, border: `1px solid ${T.amber}40`, borderRadius: 10, padding: '11px 14px', marginBottom: 16, color: T.amber, fontSize: 12, fontFamily: T.sans }}>
+          ⚠️ Mode courriel actuel: <strong>log seulement</strong>. Les messages seront enregistrés dans l'app, mais pas envoyés réellement tant que <strong>VITE_EMAIL_MODE=edge</strong> et la Edge Function <strong>send-email</strong> ne sont pas configurés.
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         <Btn onClick={autoGen}>📰 Générer newsletter semaine</Btn>
-
-        <Btn
-          onClick={() => resetCompose({ nextMode: 'annonce', nextSubject: '', nextBody: '', nextRecipientMode: 'manual' })}
-          v="a"
-        >
-          ✉️ Nouveau courriel
-        </Btn>
-
-        {emails.length > 0 && visibleEmails.length > 0 && (
-          <Btn onClick={clearEmailLogUI} v="gh">
-            🧹 Clear log UI
-          </Btn>
-        )}
-
-        {hiddenEmailLogIds.length > 0 && (
-          <Btn onClick={restoreEmailLogUI} v="gh">
-            ↩️ Réafficher logs{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
-          </Btn>
-        )}
+        <Btn onClick={() => resetCompose({ nextMode: 'annonce', nextSubject: '', nextBody: '', nextRecipientMode: 'manual' })} v="a">✉️ Nouveau courriel</Btn>
+        {emails.length > 0 && visibleEmails.length > 0 && <Btn onClick={clearEmailLogUI} v="gh">🧹 Clear log UI</Btn>}
+        {hiddenEmailLogIds.length > 0 && <Btn onClick={restoreEmailLogUI} v="gh">↩️ Réafficher logs{hiddenCount > 0 ? ` (${hiddenCount})` : ''}</Btn>}
       </div>
 
       <div style={{ display: 'grid', gap: 10 }}>
@@ -1148,21 +1057,13 @@ const EmailCenter = ({ user }) => {
                   <Badge label={e.type} />
                   <span style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 13 }}>{e.subject}</span>
                 </div>
-                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans }}>
-                  À: {e.recipient} · {fmtD(e.sent_at || e.created_at)}
-                </div>
+                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans }}>À: {e.recipient} · {fmtD(e.sent_at || e.created_at)}</div>
               </div>
               <Badge label={e.status} />
             </div>
           </div>
         ))}
-
-        {emails.length === 0 && (
-          <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>
-            Aucun courriel envoyé.
-          </div>
-        )}
-
+        {emails.length === 0 && <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>Aucun courriel envoyé.</div>}
         {emails.length > 0 && visibleEmails.length === 0 && (
           <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13, background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '13px 16px' }}>
             Historique masqué dans cette session. Les logs existent toujours dans Supabase.
@@ -1172,27 +1073,14 @@ const EmailCenter = ({ user }) => {
 
       {compose && (
         <Modal title="Composer un courriel" wide onClose={() => !sending && setCompose(false)}>
-          <Inp
-            label="Type"
-            value={mode}
-            onChange={setMode}
-            opts={[
-              { v: 'newsletter', l: '📰 Newsletter' },
-              { v: 'facture', l: '📄 Facture' },
-              { v: 'annonce', l: '📣 Annonce' },
-            ]}
-          />
-
+          <Inp label="Type" value={mode} onChange={setMode} opts={[{ v: 'newsletter', l: '📰 Newsletter' }, { v: 'facture', l: '📄 Facture' }, { v: 'annonce', l: '📣 Annonce' }]} />
           <Inp
             label="Destinataires"
             value={recipientMode}
             onChange={v => {
               setRecipientMode(v)
               if (v === 'all') setSelectedClientIds([])
-              if (v !== 'manual') {
-                setManualEmail('')
-                setManualName('Test')
-              }
+              if (v !== 'manual') { setManualEmail(''); setManualName('Test') }
             }}
             opts={[
               { v: 'manual', l: 'Entrer un courriel manuellement' },
@@ -1202,120 +1090,52 @@ const EmailCenter = ({ user }) => {
           />
 
           {recipientMode === 'manual' && (
-            <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13 }}>
-              <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .8, marginBottom: 10 }}>
-                Destinataire de test
-              </div>
-
-              <Inp
-                label="Nom"
-                value={manualName}
-                onChange={setManualName}
-                ph="Ex: Camille"
-                note="Optionnel. Utilisé pour personnaliser {prénom}."
-              />
-
-              <Inp
-                label="Courriel"
-                type="email"
-                value={manualEmail}
-                onChange={setManualEmail}
-                ph="exemple@email.com"
-                note="Ce courriel ne sera pas ajouté à la base de données. Il sert seulement à tester l’envoi."
-              />
+            <div style={{ background: T.card2, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13 }}>
+              <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .8, marginBottom: 10 }}>Destinataire de test</div>
+              <Inp label="Nom" value={manualName} onChange={setManualName} ph="Ex: Camille" note="Optionnel. Utilisé pour personnaliser {prénom}." />
+              <Inp label="Courriel" type="email" value={manualEmail} onChange={setManualEmail} ph="exemple@email.com" note="Ce courriel ne sera pas ajouté à la base de données. Il sert seulement à tester l'envoi." />
             </div>
           )}
 
           {recipientMode === 'selected' && (
-            <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13, maxHeight: 220, overflowY: 'auto' }}>
+            <div style={{ background: T.card2, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 13, maxHeight: 220, overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
-                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .8 }}>
-                  Clients sélectionnés: {selectedClientIds.length}
-                </div>
-
+                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .8 }}>Clients sélectionnés: {selectedClientIds.length}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <Btn
-                    onClick={() => setSelectedClientIds(clients.map(c => c.id))}
-                    v="gh"
-                    sz="sm"
-                  >
-                    Tout cocher
-                  </Btn>
-                  <Btn
-                    onClick={() => setSelectedClientIds([])}
-                    v="gh"
-                    sz="sm"
-                  >
-                    Tout décocher
-                  </Btn>
+                  <Btn onClick={() => setSelectedClientIds(clients.map(c => c.id))} v="gh" sz="sm">Tout cocher</Btn>
+                  <Btn onClick={() => setSelectedClientIds([])} v="gh" sz="sm">Tout décocher</Btn>
                 </div>
               </div>
-
-              {clients.length === 0 && (
-                <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans }}>
-                  Aucun client avec courriel dans la base de données.
-                </div>
-              )}
-
+              {clients.length === 0 && <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans }}>Aucun client avec courriel dans la base de données.</div>}
               {clients.map(c => (
-                <label
-                  key={c.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 6px',
-                    borderBottom: `1px solid ${T.border}`,
-                    cursor: 'pointer',
-                    fontFamily: T.sans,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedClientIds.includes(c.id)}
-                    onChange={() => toggleClient(c.id)}
-                  />
+                <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.sans }}>
+                  <input type="checkbox" checked={selectedClientIds.includes(c.id)} onChange={() => toggleClient(c.id)} />
                   <div>
-                    <div style={{ color: T.cream, fontSize: 13, fontWeight: 700 }}>
-                      {c.name || 'Client sans nom'}
-                    </div>
-                    <div style={{ color: T.textMid, fontSize: 11 }}>
-                      {c.email}
-                    </div>
+                    <div style={{ color: T.cream, fontSize: 13, fontWeight: 700 }}>{c.name || 'Client sans nom'}</div>
+                    <div style={{ color: T.textMid, fontSize: 11 }}>{c.email}</div>
                   </div>
                 </label>
               ))}
             </div>
           )}
 
-          <div style={{ background: `${T.green}14`, border: `1px solid ${T.green}30`, borderRadius: 8, padding: '10px 14px', marginBottom: 13, color: T.greenHi, fontSize: 12, fontFamily: T.sans }}>
+          <div style={{ background: `${T.green}14`, border: `1px solid ${T.green}35`, borderRadius: 8, padding: '10px 14px', marginBottom: 13, color: T.greenHi, fontSize: 12, fontFamily: T.sans }}>
             📬 Envoi prévu à:{' '}
-            {recipientMode === 'manual'
-              ? manualEmail || 'courriel manuel non défini'
-              : recipientMode === 'all'
-                ? `tous les clients (${clients.length})`
-                : `${selectedClientIds.length} client(s) sélectionné(s)`}
-            <br />
-            💡 Variables disponibles: {'{prénom}'}, {'{prenom}'}, {'{nom}'}, {'{email}'}.
+            {recipientMode === 'manual' ? manualEmail || 'courriel manuel non défini' : recipientMode === 'all' ? `tous les clients (${clients.length})` : `${selectedClientIds.length} client(s) sélectionné(s)`}
+            <br />💡 Variables disponibles: {'{prénom}'}, {'{prenom}'}, {'{nom}'}, {'{email}'}.
           </div>
 
           <Inp label="Objet" value={subj} onChange={setSubj} />
           <Inp label="Message" value={body} onChange={setBody} rows={10} />
-
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            <Btn onClick={() => setCompose(false)} v="gh" disabled={sending}>
-              Annuler
-            </Btn>
-            <Btn onClick={send} disabled={sending}>
-              {sending ? 'Envoi…' : '📤 Envoyer'}
-            </Btn>
+            <Btn onClick={() => setCompose(false)} v="gh" disabled={sending}>Annuler</Btn>
+            <Btn onClick={send} disabled={sending}>{sending ? 'Envoi…' : '📤 Envoyer'}</Btn>
           </div>
         </Modal>
       )}
     </div>
   )
 }
-
 
 // ══════════════════════════════════════════════════════════════
 // CLIENTS ADMIN
@@ -1393,7 +1213,6 @@ export default function App() {
   const [tab, setTab] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
 
-  // Supabase data for admin dashboard (only loaded when admin)
   const { rows: orders } = useTable(user?.role === 'admin' ? 'orders' : null)
   const { rows: punches } = useTable(user?.role === 'admin' ? 'punch_records' : null)
   const { rows: subs } = useTable(user?.role === 'admin' ? 'subscriptions' : null)
@@ -1401,15 +1220,11 @@ export default function App() {
   const { rows: tasks } = useTable(user?.role === 'admin' ? 'tasks' : null)
   const { rows: allUsers } = useTable(user?.role === 'admin' ? 'users' : null)
 
-  // Restore session on load
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const { data: profile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single()
-        if (profile) {
-          setUser(profile)
-          setTab(NAV[profile.role]?.[0]?.id || 'dash')
-        }
+        if (profile) { setUser(profile); setTab(NAV[profile.role]?.[0]?.id || 'dash') }
       }
       setAuthLoading(false)
     })
@@ -1432,7 +1247,7 @@ export default function App() {
   if (authLoading) return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🌿</div>
+        <img src={refutoLogo} alt="REFŪTŌ" style={{ height: 64, marginBottom: 16 }} />
         <Spinner />
       </div>
     </div>
@@ -1466,10 +1281,10 @@ export default function App() {
 
       <div style={{ background: T.card, borderBottom: `1px solid ${T.border}`, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 200 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <span style={{ fontSize: 24 }}>🌿</span>
+          <img src={refutoLogo} alt="REFŪTŌ" style={{ height: 32 }} />
           <div>
-            <div style={{ fontFamily: T.font, color: T.cream, fontSize: 14, fontWeight: 700 }}>Refuto</div>
-            <div style={{ fontFamily: T.sans, color: T.greenHi, fontSize: 9, letterSpacing: 3, textTransform: 'uppercase' }}>La Ferme Urbaine</div>
+            <div style={{ fontFamily: T.font, color: T.cream, fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>REFŪTŌ</div>
+            <div style={{ fontFamily: T.sans, color: T.green, fontSize: 9, letterSpacing: 3, textTransform: 'uppercase' }}>La Ferme Urbaine</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
