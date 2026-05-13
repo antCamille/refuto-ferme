@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase.js'
 import refutoLogo from './assets/refuto_logo.png'
+import { StripeCheckout } from './StripeCheckout.jsx'
 
 // ══════════════════════════════════════════════════════════════
 // THEME
@@ -510,7 +511,6 @@ const Shop = ({ user }) => {
   const { insert } = useTable('orders')
   const avail = inventory.filter(i => i.available)
   const [cart, setCart] = useState({})
-  const [pay, setPay] = useState('carte')
   const [note, setNote] = useState('')
   const [toast, setToast] = useState('')
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3500) }
@@ -529,8 +529,8 @@ const Shop = ({ user }) => {
       items: cartItems.map(i => ({ id: i.id, name: i.name, price: i.price, qty: cart[i.id], emoji: i.emoji })),
       total,
       status: 'nouveau',
-      pay_method: pay,
-      pay_status: pay === 'carte' ? 'payé' : 'en attente',
+      pay_method: 'comptant',
+      pay_status: 'en attente',
       delivery_note: note,
       date: TODAY,
       invoice_sent: false,
@@ -573,7 +573,10 @@ const Shop = ({ user }) => {
             <span>Total</span><span style={{ color: T.greenHi }}>{fmt$(total)}</span>
           </div>
           <Divider />
-          <Inp label="Paiement" value={pay} onChange={setPay} opts={[{ v: 'carte', l: '💳 Paiement en ligne (carte)' }, { v: 'comptant', l: '💵 Paiement à la livraison (comptant)' }]} />
+          <div style={{ background: `${T.amber}14`, border: `1px solid ${T.amber}40`, borderRadius: 10, padding: '11px 14px', marginBottom: 14, fontFamily: T.sans }}>
+            <div style={{ color: T.text, fontWeight: 600, fontSize: 13, marginBottom: 4 }}>💵 Paiement à la livraison (comptant uniquement)</div>
+            <div style={{ color: T.textMid, fontSize: 11 }}>💳 Paiement en ligne par carte — disponible prochainement</div>
+          </div>
           <Inp label="Notes de livraison" value={note} onChange={setNote} rows={2} ph="Instructions, heure préférée…" />
           <Btn onClick={place} sz="lg" full>Confirmer la commande →</Btn>
         </Card>
@@ -1180,12 +1183,128 @@ const ClientsView = ({ user }) => {
 }
 
 // ══════════════════════════════════════════════════════════════
+// PAYMENTS (Admin)
+// ══════════════════════════════════════════════════════════════
+const PaymentsAdmin = () => {
+  const { rows, loading, error, update } = useTable('orders')
+  const [filter, setFilter] = useState('tous')
+  const [modal, setModal] = useState(null)
+  const [payDate, setPayDate] = useState(TODAY)
+  const [payNote, setPayNote] = useState('')
+  const [toast, setToast] = useState('')
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  const totalPayé = rows.filter(o => o.pay_status === 'payé').reduce((s, o) => s + Number(o.total), 0)
+  const totalAttente = rows.filter(o => o.pay_status === 'en attente').reduce((s, o) => s + Number(o.total), 0)
+  const totalRemboursé = rows.filter(o => o.pay_status === 'remboursé').reduce((s, o) => s + Number(o.total), 0)
+  const countAttente = rows.filter(o => o.pay_status === 'en attente').length
+
+  const filtered = filter === 'tous' ? rows : rows.filter(o => o.pay_status === filter)
+
+  const confirmPayment = async () => {
+    const note = [modal.delivery_note, `Paiement reçu le ${fmtD(payDate)}${payNote ? ' — ' + payNote : ''}`].filter(Boolean).join(' | ')
+    await update(modal.id, { pay_status: 'payé', delivery_note: note })
+    setModal(null); setPayNote(''); setPayDate(TODAY)
+    showToast('Paiement enregistré ✓')
+  }
+
+  const FILTERS = [
+    { v: 'tous', l: 'Tous' },
+    { v: 'en attente', l: 'En attente' },
+    { v: 'payé', l: 'Payé' },
+    { v: 'remboursé', l: 'Remboursé' },
+  ]
+
+  if (loading) return <Spinner />
+  if (error) return <ErrBox msg={error} />
+
+  return (
+    <div>
+      {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}><Toast msg={toast} /></div>}
+      <SecTitle icon="💰">Suivi des paiements</SecTitle>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 20 }}>
+        <Stat emoji="✅" val={fmt$(totalPayé)} label="Encaissé" />
+        <Stat emoji="⏳" val={fmt$(totalAttente)} label={`En attente (${countAttente})`} color={T.amber} />
+        <Stat emoji="↩️" val={fmt$(totalRemboursé)} label="Remboursé" color={T.red} />
+        <Stat emoji="📊" val={fmt$(totalPayé - totalRemboursé)} label="Net total" color={T.blue} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        {FILTERS.map(f => (
+          <button key={f.v} onClick={() => setFilter(f.v)}
+            style={{ padding: '7px 16px', borderRadius: 20, border: `1.5px solid ${filter === f.v ? T.green : T.border}`, background: filter === f.v ? T.green : 'transparent', color: filter === f.v ? '#fff' : T.textMid, fontFamily: T.sans, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .2s', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {f.l}
+            {f.v === 'en attente' && countAttente > 0 && (
+              <span style={{ background: T.amber, color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{countAttente}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gap: 12 }}>
+        {filtered.map(o => (
+          <Card key={o.id} style={{ padding: '14px 18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 5, flexWrap: 'wrap' }}>
+                  <span style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 14 }}>{o.client_name}</span>
+                  <Badge label={o.pay_status} />
+                  <Badge label={o.pay_method === 'carte' ? '💳 Carte' : '💵 Comptant'} />
+                </div>
+                <div style={{ color: T.textMid, fontSize: 11, fontFamily: T.sans, marginBottom: 3 }}>
+                  {(o.items || []).map(i => `${i.emoji} ${i.name} ×${i.qty}`).join(' · ')}
+                </div>
+                {o.delivery_note && <div style={{ color: T.textDim, fontSize: 10, marginTop: 3 }}>📝 {o.delivery_note}</div>}
+                <div style={{ color: T.textDim, fontSize: 10, marginTop: 4 }}>{fmtD(o.date)} · #{o.id.slice(0, 8)}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                <div style={{ color: T.greenHi, fontWeight: 800, fontFamily: T.font, fontSize: 16 }}>{fmt$(o.total)}</div>
+                {o.pay_status === 'en attente' && (
+                  <Btn onClick={() => { setModal(o); setPayDate(TODAY); setPayNote('') }} sz="sm">💵 Enregistrer paiement</Btn>
+                )}
+                {o.pay_status === 'payé' && (
+                  <Btn onClick={() => update(o.id, { pay_status: 'remboursé' })} sz="sm" v="r">↩ Rembourser</Btn>
+                )}
+                {o.pay_status === 'remboursé' && (
+                  <Btn onClick={() => update(o.id, { pay_status: 'en attente' })} sz="sm" v="gh">Annuler remboursement</Btn>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+        {filtered.length === 0 && <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>Aucun paiement dans cette catégorie.</div>}
+      </div>
+
+      {modal && (
+        <Modal title="Enregistrer un paiement" onClose={() => setModal(null)}>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+            <div style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 14 }}>{modal.client_name}</div>
+            <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans, marginTop: 3 }}>
+              {(modal.items || []).map(i => `${i.emoji} ${i.name} ×${i.qty}`).join(' · ')}
+            </div>
+            <div style={{ color: T.greenHi, fontWeight: 800, fontFamily: T.font, fontSize: 16, marginTop: 6 }}>{fmt$(modal.total)}</div>
+          </div>
+          <Inp label="Date de réception" type="date" value={payDate} onChange={setPayDate} />
+          <Inp label="Note (optionnel)" value={payNote} onChange={setPayNote} ph="Mode de remise, remarques…" rows={2} />
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <Btn onClick={() => setModal(null)} v="gh">Annuler</Btn>
+            <Btn onClick={confirmPayment}>Confirmer le paiement ✓</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════════════════════════
 const NAV = {
   admin: [
     { id: 'dash', label: 'Aperçu', icon: '🏡' },
     { id: 'orders', label: 'Commandes', icon: '📦' },
+    { id: 'payments', label: 'Paiements', icon: '💰' },
     { id: 'inventory', label: 'Inventaire', icon: '🧺' },
     { id: 'clients', label: 'Clients', icon: '👥' },
     { id: 'timesheets', label: 'Heures', icon: '⏱' },
@@ -1262,6 +1381,7 @@ export default function App() {
     switch (tab) {
       case 'dash': return <AdminDash orders={orders} punches={punches} subs={subs} inventory={inventory} tasks={tasks} users={allUsers} setTab={setTab} />
       case 'orders': return <Orders user={user} />
+      case 'payments': return <PaymentsAdmin />
       case 'inventory': return <Inventory user={user} />
       case 'clients': return <ClientsView user={user} />
       case 'timesheets': return <Timesheets user={user} />
