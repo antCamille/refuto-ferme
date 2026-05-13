@@ -177,14 +177,17 @@ function useTable(tableName, filter = null) {
   const insert = async (row) => {
     const { error } = await supabase.from(tableName).insert(row)
     if (error) throw error
+    await load()
   }
   const update = async (id, changes) => {
     const { error } = await supabase.from(tableName).update(changes).eq('id', id)
     if (error) throw error
+    await load()
   }
   const remove = async (id) => {
     const { error } = await supabase.from(tableName).delete().eq('id', id)
     if (error) throw error
+    await load()
   }
 
   return { rows, loading, error, insert, update, remove, reload: load }
@@ -1142,12 +1145,36 @@ const EmailCenter = ({ user }) => {
 // ══════════════════════════════════════════════════════════════
 // CLIENTS ADMIN
 // ══════════════════════════════════════════════════════════════
+const EMPTY_CLIENT = { name: '', email: '', password: '', phone: '', address: '', avatar: '👤' }
+
 const ClientsView = ({ user }) => {
-  const { rows: allUsers, loading, error, remove } = useTable('users')
+  const { rows: allUsers, loading, error, remove, reload } = useTable('users')
   const { rows: subs } = useTable('subscriptions')
   const clients = allUsers.filter(u => u.role === 'client')
+  const [modal, setModal] = useState(false)
+  const [form, setForm] = useState(EMPTY_CLIENT)
+  const [creating, setCreating] = useState(false)
   const [toast, setToast] = useState('')
-  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3500) }
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const createClient = async () => {
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) return
+    setCreating(true)
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke('admin-create-client', {
+        body: { name: form.name.trim(), email: form.email.trim(), password: form.password, phone: form.phone || null, address: form.address || null, avatar: form.avatar || '👤', role: 'client' },
+      })
+      if (fnErr || data?.error) throw new Error(fnErr?.message || data?.error)
+      setModal(false); setForm(EMPTY_CLIENT)
+      showToast('Client ajouté ✓')
+      reload()
+    } catch (err) {
+      showToast('Erreur: ' + err.message)
+    } finally {
+      setCreating(false)
+    }
+  }
 
   if (loading) return <Spinner />
   if (error) return <ErrBox msg={error} />
@@ -1155,9 +1182,9 @@ const ClientsView = ({ user }) => {
   return (
     <div>
       {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}><Toast msg={toast} /></div>}
-      <SecTitle icon="👥">Base de clients</SecTitle>
-      <div style={{ background: `${T.blue}14`, border: `1px solid ${T.blue}30`, borderRadius: 10, padding: '11px 14px', marginBottom: 16, color: T.blue, fontSize: 12, fontFamily: T.sans }}>
-        ℹ️ Pour ajouter un client, créez d'abord son compte dans Supabase → Authentication → Add user, puis ajoutez son profil dans la table <strong>users</strong> avec son <strong>auth_id</strong>.
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <SecTitle icon="👥" style={{ marginBottom: 0 }}>Base de clients</SecTitle>
+        <Btn onClick={() => { setForm(EMPTY_CLIENT); setModal(true) }}>+ Ajouter un client</Btn>
       </div>
       <div style={{ display: 'grid', gap: 10 }}>
         {clients.map(c => {
@@ -1166,17 +1193,42 @@ const ClientsView = ({ user }) => {
             <Card key={c.id} style={{ padding: '14px 18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div>
-                  <div style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 14 }}>{c.name}</div>
+                  <div style={{ color: T.cream, fontWeight: 700, fontFamily: T.sans, fontSize: 14 }}>{c.avatar} {c.name}</div>
                   <div style={{ color: T.textMid, fontSize: 12, fontFamily: T.sans }}>📧 {c.email} · 📞 {c.phone || '—'}</div>
                   {c.address && <div style={{ color: T.textMid, fontSize: 11 }}>📍 {c.address}</div>}
                   <div style={{ marginTop: 7 }}>{sub ? <Badge label={`🔄 ${sub.plan}`} /> : <span style={{ color: T.textDim, fontSize: 11, fontFamily: T.sans }}>Sans abonnement</span>}</div>
                 </div>
+                <Btn onClick={() => remove(c.id)} v="r" sz="sm">✕</Btn>
               </div>
             </Card>
           )
         })}
         {clients.length === 0 && <div style={{ color: T.textMid, fontFamily: T.sans, fontSize: 13 }}>Aucun client dans la base.</div>}
       </div>
+
+      {modal && (
+        <Modal title="Ajouter un client" onClose={() => setModal(false)}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Inp label="Nom complet *" value={form.name} onChange={v => setF('name', v)} ph="Marie Tremblay" />
+            <Inp label="Avatar (emoji)" value={form.avatar} onChange={v => setF('avatar', v)} ph="👤" />
+          </div>
+          <Inp label="Courriel *" type="email" value={form.email} onChange={v => setF('email', v)} ph="marie@exemple.com" />
+          <Inp label="Mot de passe temporaire *" type="password" value={form.password} onChange={v => setF('password', v)} ph="À communiquer au client" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Inp label="Téléphone" value={form.phone} onChange={v => setF('phone', v)} ph="514-555-0000" />
+            <Inp label="Adresse" value={form.address} onChange={v => setF('address', v)} ph="123 rue des Érables" />
+          </div>
+          <div style={{ background: `${T.amber}14`, border: `1px solid ${T.amber}40`, borderRadius: 8, padding: '10px 13px', marginBottom: 4, color: T.amber, fontSize: 11, fontFamily: T.sans }}>
+            💡 Le client pourra se connecter avec ce courriel et ce mot de passe temporaire.
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+            <Btn onClick={() => setModal(false)} v="gh">Annuler</Btn>
+            <Btn onClick={createClient} disabled={creating || !form.name.trim() || !form.email.trim() || !form.password.trim()}>
+              {creating ? 'Création…' : 'Créer le compte ✓'}
+            </Btn>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
